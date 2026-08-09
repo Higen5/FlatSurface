@@ -12,7 +12,8 @@
 
 - Dil yalnızca **Kotlin**. Projede `.java` kaynak dosyası bulunmayacak.
 - **Üçüncü parti bağımlılık eklenmeyecek.** Yeni proje şablonunun getirdiği AndroidX/Compose bağımlılıkları dışında `build.gradle.kts` dosyasına satır eklenmez.
-- `compileSdk = 36`, `targetSdk = 36`, `minSdk = 26`.
+- `compileSdk = 37`, `targetSdk = 37`, `minSdk = 26`. (Spec 36 diyordu; sihirbaz AGP 9.3.1 ile 37 üretti, şablonla kavga edilmedi.)
+- Sihirbazın ürettiği sürümler: AGP 9.3.1, Kotlin 2.2.10, Compose BOM 2026.02.01. Bu değerler elle değiştirilmez.
 - Paket adı: `com.ahmet.suterazisi`. Uygulama adı: **Su Terazisi**.
 - Arayüz metinleri Türkçe.
 - Dikey yön kilidi (manifest), ekran açık kalır (`FLAG_KEEP_SCREEN_ON`).
@@ -36,6 +37,8 @@ Spec "iki dosya" diyordu; `Angles.kt` üçüncü dosya olarak ayrıldı çünkü
 ---
 
 ### Task 1: Geliştirme ortamı ve cihaz doğrulama
+
+**Durum: TAMAMLANDI (2026-08-09).** Android Studio 2026.1.3.7 kuruldu, SDK indi, `adb` cihazı `device` olarak görüyor. Sensör kontrolü geçti: `qmc6308` (manyetometre), `lsm6dso_acc`, `lsm6dso_gyro` ve AOSP `Rotation Vector Sensor` (type 11) mevcut. Cihaz `23117RA68G` / Android 16 / `BP2A.250605.031.A3` — AOSP tabanlı özel ROM, Mi hesabı gerekmiyor.
 
 Kod yok. Çıktısı: `adb` telefonu görüyor ve gereken sensörlerin varlığı kanıtlanmış oluyor. Manyetometre çıkmazsa pusula kapsamdan çıkar, bu yüzden bu görev diğer her şeyden önce gelir.
 
@@ -103,7 +106,9 @@ Beklenen: her ikisi de listede. **`Magnetic Field` çıkmazsa dur ve bildir** �
 - Consumes: Task 1'den çalışan SDK ve `adb`
 - Produces: `com.ahmet.suterazisi.MainActivity`; telefonda kurulabilen çalışır bir APK
 
-- [ ] **Step 1: Projeyi oluştur**
+**Not (2026-08-09):** Sihirbaz `G:\Projects\Mobile app test` klasörünü boş olmadığı için reddetti; proje `G:\Projects\suterazisi-tmp` içinde oluşturulup dosyalar depoya taşındı. `suterazisi-tmp` yedek olarak duruyor, Step 5 doğrulandıktan sonra silinebilir.
+
+- [x] **Step 1: Projeyi oluştur**
 
 Android Studio → **New Project** → **Empty Activity** (Compose şablonu). Ayarlar:
 
