@@ -129,7 +129,18 @@ Mevcut durum: makinede yalnızca `git` ve `winget` var. Java, Node, Android SDK 
 Windows'un yerleşik USB sürücüsü çoğu cihazda yeterli; çalışmazsa SDK Manager'dan
 Google USB Driver eklenir (yalnız gerekirse).
 
+## Hedef cihaz
+
+Redmi Note 13 Pro, Android 16, yapı numarası `BP2A.250605.031.A3`.
+
+Bu yapı numarası AOSP/Pixel formatında; Xiaomi'nin kendi yapıları `OS2.0.x.x.XXXXXXX`
+biçimindedir ve bu modele resmî Android 16 güncellemesi verilmedi. Dolayısıyla cihazda
+büyük olasılıkla özel bir ROM (LineageOS/crDroid vb.) çalışıyor. Bu, Xiaomi'nin
+"Güvenlik ayarları + Mi hesabı" zorunluluğunu ortadan kaldırır.
+
 ## Telefon tarafı (USB ile kurulum)
+
+**Özel ROM (beklenen durum):**
 
 1. Ayarlar → Telefon hakkında → **Yapı numarası**na 7 kez dokun.
 2. Ayarlar → Sistem → **Geliştirici seçenekleri**ni aç.
@@ -139,12 +150,27 @@ Google USB Driver eklenir (yalnız gerekirse).
 5. USB bağlantı modunu **Dosya aktarımı (MTP)** yap; "yalnızca şarj" modunda bazı
    cihazlarda `adb` cihazı görmez.
 
-Marka farkları (cihaz belirlendiğinde kesinleştirilecek):
+**Stok HyperOS çıkarsa** (Geliştirici seçenekleri "Ek ayarlar" altındaysa):
 
-- **Samsung:** Yapı numarası, Telefon hakkında → **Yazılım bilgileri** altındadır.
-- **Xiaomi/Redmi/POCO:** Yapı numarası yerine **MIUI sürümü**ne 7 kez dokunulur ve
-  ayrıca "**USB üzerinden hata ayıklama (Güvenlik ayarları)**" açılmalıdır; bu seçenek
-  Mi hesabı ile giriş ister.
+- 1. adımda Yapı numarası yerine **OS sürümü**ne 7 kez dokunulur.
+- USB hata ayıklamaya ek olarak "**USB üzerinden hata ayıklama (Güvenlik ayarları)**"
+  da açılmalıdır; bu seçenek SIM kartlı bir Mi hesabı ile giriş ister, yoksa
+  `adb install` reddedilir.
+
+## Açık risk: manyetometre
+
+Redmi Note 13 Pro'da manyetometre (e-pusula) bulunduğu doğrulanmadı; Xiaomi bu
+segmentte sensörü bazen çıkarıyor. Manyetometre yoksa `TYPE_ROTATION_VECTOR` mutlak
+yön veremez ve pusula halkası anlamsız kalır (eğim/kabarcık kısmı etkilenmez).
+
+Doğrulama, araçlar kurulup telefon bağlandıktan sonra tek komutla yapılır:
+
+```
+adb shell dumpsys sensorservice | findstr /i "magnet rotation"
+```
+
+`Magnetic Field` ve `Rotation Vector` görünüyorsa tasarım aynen geçerlidir. Görünmezse
+pusula kapsamdan çıkarılır. Bu ihtimal için şimdiden koda yedek yol yazılmaz.
 
 ## Kapsam dışı
 
