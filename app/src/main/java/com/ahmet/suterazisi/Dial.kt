@@ -148,28 +148,42 @@ fun Dial(east: Vec3, north: Vec3, up: Vec3, level: Boolean, modifier: Modifier =
         }
 
         // --- Kabarcik: su yuzeyinin tepesinde, kubbe ic yuzeyine oturur ---
-        val bubblePos = eff * (DOME_R - BUBBLE_R * 0.7f)
+        // Yorunge yaricapi DOME_R - BUBBLE_R: kabarcik kurenin icine tam tegettir,
+        // camin disina tasmaz. Perspektifte kalan tasma clipPath ile kirpilir.
+        val orbit = DOME_R - BUBBLE_R
+        val bubblePos = eff * orbit
         val bp = screen(bubblePos)
         val br = focal * BUBBLE_R / (EYE - bubblePos.z)
         val tint = if (level) LevelGreen else BubblePale
 
-        // Hedef halkasi kubbenin tepesinde durur, kabarcik buna oturunca duzdur.
-        val topPos = Vec3(0f, 0f, DOME_R - BUBBLE_R * 0.7f)
+        val topPos = Vec3(0f, 0f, orbit)
         val tp = screen(topPos)
         val tr = focal * BUBBLE_R / (EYE - topPos.z) + 4.dp.toPx()
-        drawCircle(tint.copy(alpha = 0.5f), tr, tp, style = Stroke(1.5.dp.toPx()))
 
-        drawCircle(Color.Black.copy(alpha = 0.35f), br, Offset(bp.x + 2.dp.toPx(), bp.y + 3.dp.toPx()))
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(Color.White.copy(alpha = 0.95f), tint, tint.copy(alpha = 0.5f)),
-                center = Offset(bp.x - br * 0.35f, bp.y - br * 0.35f),
-                radius = br * 1.7f
-            ),
-            radius = br,
-            center = bp
-        )
-        drawCircle(Color.White.copy(alpha = 0.9f), br * 0.16f, Offset(bp.x - br * 0.4f, bp.y - br * 0.42f))
+        clipPath(domeClip) {
+            // Hedef halkasi kubbenin tepesinde durur, kabarcik buna oturunca duzdur.
+            drawCircle(tint.copy(alpha = 0.5f), tr, tp, style = Stroke(1.5.dp.toPx()))
+
+            drawCircle(
+                Color.Black.copy(alpha = 0.35f),
+                br,
+                Offset(bp.x + 2.dp.toPx(), bp.y + 3.dp.toPx())
+            )
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(Color.White.copy(alpha = 0.95f), tint, tint.copy(alpha = 0.5f)),
+                    center = Offset(bp.x - br * 0.35f, bp.y - br * 0.35f),
+                    radius = br * 1.7f
+                ),
+                radius = br,
+                center = bp
+            )
+            drawCircle(
+                Color.White.copy(alpha = 0.9f),
+                br * 0.16f,
+                Offset(bp.x - br * 0.4f, bp.y - br * 0.42f)
+            )
+        }
 
         // --- Cam ustu: yansima ve kenar derinligi, en sona cizilir ---
         drawCircle(
