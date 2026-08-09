@@ -53,19 +53,46 @@ düz JVM testinden çağrılabilir.
 
 ## Derleme
 
-Android Studio ile açıp çalıştırmak yeterli. Komut satırından:
-
 ```bash
 ./gradlew testDebugUnitTest assembleDebug
 ```
 
 Üretilen APK: `app/build/outputs/apk/debug/app-debug.apk`
 
-Windows'ta `JAVA_HOME` tanımlı değilse Android Studio'nun kendi JDK'sı kullanılabilir:
+Sistemde ayrı bir JDK yoksa Android Studio'nun kendi JDK'sı yeterlidir:
 
 ```bash
 JAVA_HOME="/c/Program Files/Android/Android Studio/jbr" ./gradlew assembleDebug
 ```
+
+## Telefona kurulum
+
+Android Studio gerekmez; `adb` yeterlidir. Telefonda Geliştirici seçenekleri →
+USB hata ayıklama açık olmalı ve USB modu "Dosya aktarımı" seçilmelidir.
+
+```bash
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+Kurulduktan sonra uygulama telefonda bağımsız çalışır; bilgisayara veya kabloya
+ihtiyaç duymaz.
+
+`adb devices` cihazı `unauthorized` gösteriyorsa telefondaki izin penceresi
+onaylanmamıştır. Liste tamamen boşsa cihaz genelde "veri aktarımı yok" modundadır;
+USB modunu değiştirmek çözer.
+
+## Bilinen davranış
+
+Alttaki `X` / `Y` değerleri Android'in `getOrientation` konvansiyonunu izler:
+
+```
+pitch = asin(-up.y)      roll = atan2(-up.x, up.z)
+```
+
+Bu yüzden **sayının işareti kabarcığın gittiği yönün tersidir** — örneğin `X`
+pozitifken kabarcık sola gider, yani yüksek olan sol taraftır. Kabarcığın kendisi
+doğrudan yerçekimi vektöründen konumlandığı için her zaman fiziksel olarak doğru
+tarafta durur; ters okunan yalnızca sayının işaretidir.
 
 ## Testler
 
