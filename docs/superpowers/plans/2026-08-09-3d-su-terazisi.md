@@ -474,6 +474,11 @@ git commit -m "feat: rotation vector sensoru ve sayisal aci gosterimi"
 
 ### Task 5: Kubbe, kabarcık ve pusula kadranı çizimi
 
+> **GEÇERSİZ (2026-08-09).** Bu görev tamamlandı, ardından tasarım gerçek 3B'ye
+> çekildi. Aşağıdaki `Dial.kt` kodu ve `bubbleOffset` çağrıları artık depodaki
+> koda uymuyor. Güncel tasarım için spec'teki "Tasarım revizyonu: gerçek 3D"
+> bölümüne ve `Scene3d.kt` / `Dial.kt` dosyalarına bakın.
+
 **Files:**
 - Create: `app/src/main/java/com/ahmet/suterazisi/Dial.kt`
 - Modify: `app/src/main/java/com/ahmet/suterazisi/MainActivity.kt` (yalnızca `setContent` gövdesine `Dial` eklenir)

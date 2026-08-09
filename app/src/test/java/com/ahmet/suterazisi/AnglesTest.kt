@@ -25,18 +25,6 @@ class AnglesTest {
     }
 
     @Test
-    fun `bubbleOffset merkez ve kirpma`() {
-        assertEquals(0f to 0f, bubbleOffset(0f, 0f, 100f))
-        // 90 derece egim yaricapi cok asar, kenara kirpilmali
-        val (x, y) = bubbleOffset(90f, 0f, 100f, 30f)
-        assertEquals(0f, x, 0.001f)
-        assertEquals(100f, y, 0.001f)
-        // capraz egimde de yaricap asilmaz
-        val (dx, dy) = bubbleOffset(90f, 90f, 100f, 30f)
-        assertEquals(100f, Math.hypot(dx.toDouble(), dy.toDouble()).toFloat(), 0.01f)
-    }
-
-    @Test
     fun `isLevel tolerans sinirinda`() {
         assertTrue(isLevel(0.4f, -0.3f))
         assertFalse(isLevel(0.6f, 0f))

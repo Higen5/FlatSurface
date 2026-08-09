@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,6 +37,11 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     private var azimuth by mutableFloatStateOf(0f)
     private var pitch by mutableFloatStateOf(0f)
     private var roll by mutableFloatStateOf(0f)
+
+    // Dünya eksenlerinin cihaz uzayındaki karşılığı: rotasyon matrisinin üç satırı.
+    private var east by mutableStateOf(Vec3(1f, 0f, 0f))
+    private var north by mutableStateOf(Vec3(0f, 1f, 0f))
+    private var up by mutableStateOf(Vec3(0f, 0f, 1f))
 
     private val rm = FloatArray(9)
     private val orient = FloatArray(3)
@@ -70,9 +76,10 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                         fontWeight = FontWeight.Bold
                     )
                     Dial(
-                        azimuth = azimuth,
-                        pitch = pitch,
-                        roll = roll,
+                        east = east,
+                        north = north,
+                        up = up,
+                        level = isLevel(pitch, roll),
                         modifier = Modifier
                             .fillMaxWidth()
                             .aspectRatio(1f)
@@ -103,6 +110,9 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 
     override fun onSensorChanged(event: SensorEvent) {
         SensorManager.getRotationMatrixFromVector(rm, event.values)
+        east = lerpVec(east, Vec3(rm[0], rm[1], rm[2]))
+        north = lerpVec(north, Vec3(rm[3], rm[4], rm[5]))
+        up = lerpVec(up, Vec3(rm[6], rm[7], rm[8]))
         SensorManager.getOrientation(rm, orient)
         azimuth = smoothAngle(azimuth, Math.toDegrees(orient[0].toDouble()).toFloat())
         pitch = smooth(pitch, Math.toDegrees(orient[1].toDouble()).toFloat())

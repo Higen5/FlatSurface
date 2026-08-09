@@ -4,73 +4,92 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
 private val Gold = Color(0xFFD9B863)
-private val North = Color(0xFFFF6B6B)
-private val Glass = Color(0xFF11151C)
+private val NorthRed = Color(0xFFFF6B6B)
+private val WaterDeep = Color(0xFF0E3B57)
+private val WaterTop = Color(0xFF2E86B8)
 private val LevelGreen = Color(0xFF3ED87F)
-private val BubbleBlue = Color(0xFF7BC0FF)
+private val BubblePale = Color(0xFFDCF2FF)
 
+// Sahne birimleri: kubbe yaricapi 1.
+private const val DOME_R = 1f
+private const val RING_R = 1.78f
+private const val EYE = 5.5f
+private const val BUBBLE_R = 0.26f
+// Su duzleminin kure merkezinden yuksekligi. Buyudukce kesit cemberi kuculur ve
+// kubbenin cam govdesi yuzeyin cevresinde gorunur kalir; derinlik hissi bundan gelir.
+private const val WATER_FILL = 0.72f
+
+/**
+ * 3B sahne: dunyaya sabit pusula kadrani, cihaza sabit cam kubbe, dunya yatayinda su yuzeyi.
+ *
+ * east/north/up, Android rotasyon matrisinin satirlaridir (dunya eksenlerinin cihaz
+ * uzayindaki karsiligi). Kadran dunya duzleminde durdugu icin telefon egildikce
+ * perspektifte elipse doner; kubbe cihaza bagli oldugu icin daire kalir.
+ */
 @Composable
-fun Dial(azimuth: Float, pitch: Float, roll: Float, modifier: Modifier = Modifier) {
+fun Dial(east: Vec3, north: Vec3, up: Vec3, level: Boolean, modifier: Modifier = Modifier) {
     val measurer = rememberTextMeasurer()
+
     Canvas(modifier) {
         val c = Offset(size.width / 2f, size.height / 2f)
         val outer = minOf(size.width, size.height) / 2f - 6.dp.toPx()
-        val domeR = outer * 0.60f
-        val bubbleR = 18.dp.toPx()
-        val tint = if (isLevel(pitch, roll)) LevelGreen else BubbleBlue
+        val focal = outer * EYE / RING_R
 
-        drawRing(c, outer, azimuth, measurer)
-        drawDome(c, domeR)
-        drawTarget(c, bubbleR + 5.dp.toPx(), tint)
+        fun screen(p: Vec3): Offset {
+            val (x, y) = project(p, EYE, focal)
+            return Offset(c.x + x, c.y - y)
+        }
 
-        val (bx, by) = bubbleOffset(pitch, roll, domeR - bubbleR)
-        // y yukari pozitif; ekran koordinatinda asagi pozitif oldugu icin isaret cevriliyor
-        drawBubble(Offset(c.x + bx, c.y - by), bubbleR, tint)
-    }
-}
+        fun world(e: Float, n: Float): Offset =
+            screen(worldToDevice(east, north, up, e, n, 0f))
 
-private fun DrawScope.drawRing(c: Offset, r: Float, azimuth: Float, m: TextMeasurer) {
-    drawCircle(Color(0xFF0C0F14), r, c)
-    drawCircle(Gold.copy(alpha = 0.30f), r, c, style = Stroke(1.5.dp.toPx()))
+        // --- Pusula kadrani: dunya yatay duzleminde, kuzeye hizali ---
+        val ringPath = Path()
+        for (i in 0..120) {
+            val t = i / 120f * 2f * PI.toFloat()
+            val o = world(RING_R * sin(t), RING_R * cos(t))
+            if (i == 0) ringPath.moveTo(o.x, o.y) else ringPath.lineTo(o.x, o.y)
+        }
+        drawPath(ringPath, Color(0xFF0C0F14).copy(alpha = 0.85f))
+        drawPath(ringPath, Gold.copy(alpha = 0.35f), style = Stroke(1.5.dp.toPx()))
 
-    rotate(-azimuth, c) {
         for (deg in 0 until 360 step 15) {
             val major = deg % 45 == 0
-            val a = Math.toRadians(deg.toDouble() - 90.0)
-            val ca = cos(a).toFloat()
-            val sa = sin(a).toFloat()
-            val len = if (major) 13.dp.toPx() else 6.dp.toPx()
+            val a = deg / 180f * PI.toFloat()
+            val inner = RING_R - if (major) 0.16f else 0.075f
             drawLine(
                 color = if (major) Gold else Gold.copy(alpha = 0.35f),
-                start = Offset(c.x + ca * r, c.y + sa * r),
-                end = Offset(c.x + ca * (r - len), c.y + sa * (r - len)),
+                start = world(RING_R * sin(a), RING_R * cos(a)),
+                end = world(inner * sin(a), inner * cos(a)),
                 strokeWidth = if (major) 2.5.dp.toPx() else 1.dp.toPx()
             )
         }
 
-        val labelR = r - 32.dp.toPx()
+        // Harfler dik cizilir: 3B sahnede yatirilmis yazi okunmaz hale gelirdi.
         listOf(0 to "K", 90 to "D", 180 to "G", 270 to "B").forEach { (deg, txt) ->
-            val a = Math.toRadians(deg.toDouble() - 90.0)
-            val layout = m.measure(
+            val a = deg / 180f * PI.toFloat()
+            val pos = world(1.44f * sin(a), 1.44f * cos(a))
+            val layout = measurer.measure(
                 txt,
                 TextStyle(
-                    color = if (deg == 0) North else Gold,
+                    color = if (deg == 0) NorthRed else Gold,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -78,54 +97,91 @@ private fun DrawScope.drawRing(c: Offset, r: Float, azimuth: Float, m: TextMeasu
             drawText(
                 layout,
                 topLeft = Offset(
-                    c.x + cos(a).toFloat() * labelR - layout.size.width / 2f,
-                    c.y + sin(a).toFloat() * labelR - layout.size.height / 2f
+                    pos.x - layout.size.width / 2f,
+                    pos.y - layout.size.height / 2f
                 )
             )
         }
+
+        // --- Cam kubbe: cihaza sabit, hep daire ---
+        val domePx = focal * DOME_R / EYE
+        val domeClip = Path().apply {
+            addOval(Rect(c.x - domePx, c.y - domePx, c.x + domePx, c.y + domePx))
+        }
+        drawCircle(Color(0xFF0A0D12), domePx, c)
+
+        // --- Su: dunya yatayinda duzlem, kureyi keser ---
+        val eff = bubbleDir(up)
+        val (surfC, surfR) = surfaceCircle(eff, DOME_R * 0.985f, WATER_FILL)
+        val (bu, bv) = basisFor(eff)
+
+        val surfCenter = screen(surfC)
+
+        clipPath(domeClip) {
+            // Icbukey govde: kenara dogru koyulasan gradyan derinlik hissini verir.
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(WaterDeep, Color(0xFF04080C)),
+                    center = c,
+                    radius = domePx
+                ),
+                radius = domePx,
+                center = c
+            )
+            val surface = Path()
+            for (i in 0..72) {
+                val t = i / 72f * 2f * PI.toFloat()
+                val p = surfC + bu * (cos(t) * surfR) + bv * (sin(t) * surfR)
+                val o = screen(p)
+                if (i == 0) surface.moveTo(o.x, o.y) else surface.lineTo(o.x, o.y)
+            }
+            surface.close()
+            drawPath(
+                surface,
+                Brush.radialGradient(
+                    colors = listOf(WaterTop.copy(alpha = 0.85f), WaterTop.copy(alpha = 0.4f)),
+                    center = Offset(surfCenter.x - domePx * 0.2f, surfCenter.y - domePx * 0.2f),
+                    radius = domePx
+                )
+            )
+            drawPath(surface, WaterTop.copy(alpha = 0.95f), style = Stroke(1.5.dp.toPx()))
+        }
+
+        // --- Kabarcik: su yuzeyinin tepesinde, kubbe ic yuzeyine oturur ---
+        val bubblePos = eff * (DOME_R - BUBBLE_R * 0.7f)
+        val bp = screen(bubblePos)
+        val br = focal * BUBBLE_R / (EYE - bubblePos.z)
+        val tint = if (level) LevelGreen else BubblePale
+
+        // Hedef halkasi kubbenin tepesinde durur, kabarcik buna oturunca duzdur.
+        val topPos = Vec3(0f, 0f, DOME_R - BUBBLE_R * 0.7f)
+        val tp = screen(topPos)
+        val tr = focal * BUBBLE_R / (EYE - topPos.z) + 4.dp.toPx()
+        drawCircle(tint.copy(alpha = 0.5f), tr, tp, style = Stroke(1.5.dp.toPx()))
+
+        drawCircle(Color.Black.copy(alpha = 0.35f), br, Offset(bp.x + 2.dp.toPx(), bp.y + 3.dp.toPx()))
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(Color.White.copy(alpha = 0.95f), tint, tint.copy(alpha = 0.5f)),
+                center = Offset(bp.x - br * 0.35f, bp.y - br * 0.35f),
+                radius = br * 1.7f
+            ),
+            radius = br,
+            center = bp
+        )
+        drawCircle(Color.White.copy(alpha = 0.9f), br * 0.16f, Offset(bp.x - br * 0.4f, bp.y - br * 0.42f))
+
+        // --- Cam ustu: yansima ve kenar derinligi, en sona cizilir ---
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(Color.White.copy(alpha = 0.14f), Color.Transparent),
+                center = Offset(c.x - domePx * 0.4f, c.y - domePx * 0.4f),
+                radius = domePx * 1.05f
+            ),
+            radius = domePx,
+            center = c
+        )
+        drawCircle(Color.Black.copy(alpha = 0.5f), domePx, c, style = Stroke(7.dp.toPx()))
+        drawCircle(Gold.copy(alpha = 0.3f), domePx, c, style = Stroke(1.dp.toPx()))
     }
-}
-
-private fun DrawScope.drawDome(c: Offset, r: Float) {
-    drawCircle(Glass, r, c)
-    // sol ustten gelen isik: camin hacim hissi
-    drawCircle(
-        brush = Brush.radialGradient(
-            colors = listOf(Color.White.copy(alpha = 0.10f), Color.Transparent),
-            center = Offset(c.x - r * 0.35f, c.y - r * 0.35f),
-            radius = r * 1.1f
-        ),
-        radius = r,
-        center = c
-    )
-    // ic golge halkasi: kubbe kenarinin derinligi
-    drawCircle(Color.Black.copy(alpha = 0.55f), r, c, style = Stroke(6.dp.toPx()))
-    drawCircle(Gold.copy(alpha = 0.25f), r, c, style = Stroke(1.dp.toPx()))
-}
-
-private fun DrawScope.drawTarget(c: Offset, r: Float, tint: Color) {
-    drawCircle(tint.copy(alpha = 0.55f), r, c, style = Stroke(1.5.dp.toPx()))
-}
-
-private fun DrawScope.drawBubble(p: Offset, r: Float, tint: Color) {
-    drawCircle(
-        Color.Black.copy(alpha = 0.45f),
-        r,
-        Offset(p.x + 2.dp.toPx(), p.y + 3.dp.toPx())
-    )
-    drawCircle(
-        brush = Brush.radialGradient(
-            colors = listOf(Color.White.copy(alpha = 0.90f), tint, tint.copy(alpha = 0.65f)),
-            center = Offset(p.x - r * 0.35f, p.y - r * 0.35f),
-            radius = r * 1.6f
-        ),
-        radius = r,
-        center = p
-    )
-    // spekuler nokta: cam kabarcik hissinin tamamlayicisi
-    drawCircle(
-        Color.White.copy(alpha = 0.85f),
-        r * 0.18f,
-        Offset(p.x - r * 0.38f, p.y - r * 0.40f)
-    )
 }

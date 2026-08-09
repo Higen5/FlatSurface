@@ -57,15 +57,31 @@ Tek ekran, birleşik yerleşim. Koyu arka plan sabit (tema anahtarı yok).
         └─────────────────┘
 ```
 
-"3D" görünüm gerçek 3D geometri ile değil, katmanlı 2D çizimle elde edilir:
+### Tasarım revizyonu (2026-08-09): gerçek 3D
 
-- **Kubbe:** taban dairesi, üzerine radyal gradyan (sol-üst açık → sağ-alt koyu),
-  iç kenarda koyu halka, üst tarafta geniş beyaz yansıma yayı.
-- **Kabarcık:** altında hafif kaydırılmış koyu gölge dairesi, üzerinde gövde gradyanı,
-  sol-üstte küçük beyaz parlama noktası.
-- **Hedef:** merkezde iki ince çember (kabarcık çapı ve tolerans çapı).
+İlk sürüm katmanlı 2D çizimle sahte derinlik veriyordu. Kullanıcı isteğiyle gerçek 3B
+sahneye geçildi. Yöntem: **perspektif projeksiyon**, hesap Kotlin'de, çizim yine tek
+`Canvas` üzerinde. OpenGL ES ve AGSL shader değerlendirilip elendi (biri belirgin
+şekilde fazla kod, diğeri Android 13+ gerektirip ikinci bir çizim yolu doğuruyordu).
 
-Gerçek 3D (OpenGL/Filament) ve fizikli sıvı çalkalanması kapsam dışı.
+Sahne fiziksel olarak modellenir:
+
+- **Pusula kadranı dünyaya sabittir.** Gerçek pusulalardaki yataylanan kadranın
+  karşılığı: yatay düzlemde durur, kuzeye hizalıdır. Telefon eğildikçe perspektifte
+  elipse döner, döndükçe kendi ekseninde döner.
+- **Cam kubbe cihaza sabittir.** Alet gövdesine takılı vial gibi davranır, bu yüzden
+  ekranda hep daire kalır; derinlik gradyan ve kenar gölgesiyle verilir.
+- **Su yüzeyi dünya yatayındadır.** Yatay düzlemin küreyi kestiği çember, kubbenin
+  içinde eğildikçe kayan ve yatan bir elips olarak görünür. Asıl 3B ipucu budur.
+- **Kabarcık dünya yukarısı yönündedir.** Kubbe iç yüzeyinde `up` vektörü yönüne
+  oturur; yani daima yükselen tarafa gider. Bu, işaret tahmini ihtiyacını ortadan
+  kaldırır — davranış fizikten çıkar.
+
+Gerçek eğim görsel olarak `gain` katsayısıyla büyütülür (gerçek vial'ın büyük eğrilik
+yarıçapının karşılığı) ve `maxTilt` ile kubbe kenarında sınırlanır.
+
+Fizikli sıvı çalkalanması kapsam dışı: su düzlemi her an tam yataydır, sönümlenen
+salınım yoktur.
 
 ## Mimari
 
@@ -177,6 +193,6 @@ pusula kapsamdan çıkarılır. Bu ihtimal için şimdiden koda yedek yol yazıl
 - Kalibrasyon ("şu an düz kabul et") butonu — telefon kasası eğriyse sonradan eklenir.
 - Dikey/şahmerdan modu (tek eksenli tüp terazi).
 - Sekmeli navigasyon, ayar ekranı.
-- Gerçek 3D motoru, fizikli sıvı simülasyonu.
+- Fizikli sıvı simülasyonu (çalkalanma, sönümlenen dalga).
 - Play Store yayını, imzalı release APK.
 - iOS.
